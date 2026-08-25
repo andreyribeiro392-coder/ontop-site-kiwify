@@ -1,5 +1,5 @@
-const CACHE='ontop-plus-v31';
-const ASSETS=['/','/styles.css?v=30','/guide.css?v=10','/catalog.css?v=10','/catalog-prices.css?v=10','/toast.css?v=10','/refresh.css?v=10','/guide-proof.css?v=17','/validation.css?v=17','/app.js?v=28','/academy.js?v=26','/guide.js?v=17','/catalog-ui.js?v=17','/legal.css','/privacy.html','/terms.html','/assets-ontop-logo.png?v=4','/manifest.webmanifest?v=4'];
+const CACHE='ontop-plus-v32';
+const ASSETS=['/','/styles.css?v=30','/guide.css?v=10','/catalog.css?v=10','/catalog-prices.css?v=10','/toast.css?v=10','/refresh.css?v=10','/guide-proof.css?v=17','/validation.css?v=17','/app.js?v=28','/academy.js?v=26','/guide.js?v=17','/catalog-ui.js?v=17','/legal.css','/privacy.html','/terms.html','/assets-ontop-mark.svg?v=1','/manifest.webmanifest?v=4'];
 self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)))});
 self.addEventListener('activate',event=>event.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))])));
 self.addEventListener('fetch',event=>{if(event.request.method!=='GET'||new URL(event.request.url).pathname.startsWith('/api/'))return;event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request)))});
