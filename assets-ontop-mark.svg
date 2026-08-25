@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">OnTop</title>
+  <desc id="desc">Símbolo circular OnTop em preto, branco e violeta</desc>
+  <defs>
+    <linearGradient id="ring" x1="18" y1="18" x2="238" y2="238" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a9b5ff"/><stop offset=".48" stop-color="#7168ff"/><stop offset="1" stop-color="#b88cff"/>
+    </linearGradient>
+  </defs>
+  <circle cx="128" cy="128" r="116" fill="#07080d" stroke="url(#ring)" stroke-width="7"/>
+  <circle cx="128" cy="128" r="92" fill="none" stroke="#242949" stroke-width="2"/>
+  <path d="M128 62c-37 0-66 29-66 66s29 66 66 66c20 0 38-8 50-22l-19-16c-8 9-18 14-31 14-24 0-42-18-42-42s18-42 42-42c13 0 24 5 32 14l19-16c-12-14-31-22-51-22Z" fill="#fff"/>
+  <text x="128" y="226" text-anchor="middle" fill="#c8ceff" font-family="Arial,Helvetica,sans-serif" font-size="19" font-weight="700" letter-spacing="4">ONTOP</text>
+</svg>
