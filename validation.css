@@ -1,0 +1,3 @@
+.input-rule{margin:8px 0 16px;padding:10px 12px;border:1px solid #303a54;border-radius:9px;background:#111725;color:#aeb7cb;font-size:12px;line-height:1.5}
+input:invalid:not(:placeholder-shown),textarea:invalid:not(:placeholder-shown){border-color:#c76f78!important;box-shadow:0 0 0 3px #c76f7814!important}
+button:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.25);transform:none!important;box-shadow:none!important}
