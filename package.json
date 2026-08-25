@@ -1,0 +1,1 @@
+{"name":"ontop-central-plus","version":"1.1.0","private":true,"type":"module","scripts":{"dev":"vercel dev","check":"node --check app.js && node --check admin.js && node --check api/admin.js && node --check api/catalog.js"},"engines":{"node":">=20"}}
