@@ -1,1 +1,1 @@
-{"name":"OnTop Central Plus","short_name":"OnTop Plus","start_url":"/","display":"standalone","background_color":"#08090c","theme_color":"#08090c","icons":[{"src":"/assets-ontop-logo.png?v=4","sizes":"1024x1024","type":"image/png","purpose":"any maskable"}]}
+{"name":"OnTop Central Plus","short_name":"OnTop Plus","start_url":"/","display":"standalone","background_color":"#08090c","theme_color":"#08090c","icons":[{"src":"/assets-ontop-mark.svg?v=1","sizes":"256x256","type":"image/svg+xml","purpose":"any maskable"}]}
