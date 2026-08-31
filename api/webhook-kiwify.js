@@ -35,10 +35,12 @@ function signatureValid(req){
   const headers=req.headers||{};
   const candidates=[
     headers['x-kiwify-signature'],
-    headers['x-webhook-signature'],\n    headers['signature'],
+    headers['x-webhook-signature'],
+    headers['signature'],
     headers['x-kiwify-token'],
     headers['x-webhook-token'],
-    req.query?.signature,\n    req.query?.token,
+    req.query?.signature,
+    req.query?.token,
     body.signature,
     body.token,
     body.webhook_token
