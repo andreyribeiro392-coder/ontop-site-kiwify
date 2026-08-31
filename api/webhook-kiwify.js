@@ -3,7 +3,7 @@ import {createAccess,getJson,updateAccess,configured} from './_store.js';
 import {json,safeEqual} from './_security.js';
 import {sendAccessEmail} from './_email.js';
 
-function requestBodyText(req){
+function cleanSecret(value){\n  return String(value||'').trim().replace(/^(['\"])(.*)\\\\1$/,'$2').trim();\n}\n\nfunction requestBodyText(req){
   if(typeof req.rawBody==='string')return req.rawBody;
   if(Buffer.isBuffer(req.rawBody))return req.rawBody.toString('utf8');
   if(typeof req.body==='string')return req.body;
@@ -25,20 +25,20 @@ function signedPayloads(req){
 }
 
 function signatureValid(req){
-  const secret=String(process.env.KIWIFY_WEBHOOK_SECRET||process.env.KIWIFY_WEBHOOK_TOKEN||'').trim();
+  const secret=cleanSecret(process.env.KIWIFY_WEBHOOK_SECRET||process.env.KIWIFY_WEBHOOK_TOKEN);
   if(!secret)return false;
   const body=req.body||{};
   const headers=req.headers||{};
   const candidates=[
     headers['x-kiwify-signature'],
-    headers['x-webhook-signature'],
+    headers['x-webhook-signature'],\n    headers['signature'],
     headers['x-kiwify-token'],
     headers['x-webhook-token'],
-    req.query?.token,
+    req.query?.signature,\n    req.query?.token,
     body.signature,
     body.token,
     body.webhook_token
-  ].map(value=>String(value||'').trim()).filter(Boolean);
+  ].map(cleanSecret).filter(Boolean);
   const payloads=signedPayloads(req);
   const digests=[];
   for(const payload of payloads){
