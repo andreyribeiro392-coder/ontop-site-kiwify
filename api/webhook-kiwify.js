@@ -3,7 +3,11 @@ import {createAccess,getJson,updateAccess,configured} from './_store.js';
 import {json,safeEqual} from './_security.js';
 import {sendAccessEmail} from './_email.js';
 
-function cleanSecret(value){\n  return String(value||'').trim().replace(/^(['\"])(.*)\\\\1$/,'$2').trim();\n}\n\nfunction requestBodyText(req){
+function cleanSecret(value){
+  return String(value||'').trim().replace(/^(['"])(.*)\\1$/,'$2').trim();
+}
+
+function requestBodyText(req){
   if(typeof req.rawBody==='string')return req.rawBody;
   if(Buffer.isBuffer(req.rawBody))return req.rawBody.toString('utf8');
   if(typeof req.body==='string')return req.body;
