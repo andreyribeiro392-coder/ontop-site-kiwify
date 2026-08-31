@@ -104,7 +104,7 @@ function generalPrompt(i){
  `50. Crie uma checklist final com dez itens específicos da categoria ${cat}.`,
  '',
  'RESPOSTA FINAL',
- `51. Comece com um resumo do diagnóstico e da estratégia escolhida.`,
+ `51. Comece com um resumo do diagnóstico e da estratégia escolida.`,
  `52. Apresente o ${output} completo em seções numeradas.`,
  `53. Separe o exemplo preenchido do modelo editável.`,
  `54. Inclua a checklist de qualidade e o plano de aplicação.`,
