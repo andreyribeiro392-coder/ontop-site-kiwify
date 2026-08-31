@@ -10,10 +10,24 @@ function requestBodyText(req){
   return JSON.stringify(req.body||{});
 }
 
+function signedPayloads(req){
+  const body=req.body;
+  const values=[requestBodyText(req)];
+  if(body&&typeof body==='object'){
+    if(body.order)values.push(JSON.stringify(body.order));
+    const withoutSignature={...body};
+    delete withoutSignature.signature;
+    delete withoutSignature.token;
+    delete withoutSignature.webhook_token;
+    values.push(JSON.stringify(withoutSignature));
+  }
+  return [...new Set(values.filter(Boolean))];
+}
+
 function signatureValid(req){
   const secret=String(process.env.KIWIFY_WEBHOOK_SECRET||'').trim();
   if(!secret)return false;
-  const body=requestBodyText(req);
+  const body=req.body||{};
   const headers=req.headers||{};
   const candidates=[
     headers['x-kiwify-signature'],
@@ -21,15 +35,23 @@ function signatureValid(req){
     headers['x-kiwify-token'],
     headers['x-webhook-token'],
     req.query?.token,
-    req.body?.token,
-    req.body?.webhook_token
+    body.signature,
+    body.token,
+    body.webhook_token
   ].map(value=>String(value||'').trim()).filter(Boolean);
+  const payloads=signedPayloads(req);
+  const digests=[];
+  for(const payload of payloads){
+    digests.push(
+      crypto.createHmac('sha1',secret).update(payload).digest('hex'),
+      crypto.createHmac('sha256',secret).update(payload).digest('hex')
+    );
+  }
   for(const received of candidates){
-    if(safeEqual(received.replace(/^Bearer\\s+/i,''),secret))return true;
-    const bare=received.replace(/^sha(?:1|256)=/i,'');
-    const sha1=crypto.createHmac('sha1',secret).update(body).digest('hex');
-    const sha256=crypto.createHmac('sha256',secret).update(body).digest('hex');
-    if(safeEqual(bare,sha1)||safeEqual(bare,sha256))return true;
+    const normalized=received.replace(/^Bearer\\s+/i,'');
+    if(safeEqual(normalized,secret))return true;
+    const bare=normalized.replace(/^sha(?:1|256)=/i,'');
+    if(digests.some(digest=>safeEqual(bare,digest)))return true;
   }
   return false;
 }
@@ -51,13 +73,13 @@ export default async function handler(req,res){
     return json(res,401,{error:'Assinatura inválida'});
   }
   try{
-    const event=String(val(req.body,['event','event_type','webhook_event_type','webhook_event','type','order_status','status','data.event'])).toLowerCase();
-    const product=String(val(req.body,['product.name','product.product_name','Product.product_name','product_name','offer.product.name','data.product.name']));
+    const event=String(val(req.body,['event','event_type','webhook_event_type','webhook_event','type','order_status','status','order.webhook_event_type','order.order_status','order.status','order.event','data.event'])).toLowerCase();
+    const product=String(val(req.body,['product.name','product.product_name','Product.product_name','product_name','order.Product.product_name','order.Product.product_name','order.product_name','order.product.name','order.Product.name','offer.product.name','data.product.name']));
     const allowed=(process.env.KIWIFY_PLUS_PRODUCT_MATCH||'ontop').toLowerCase().split(',').map(x=>x.trim()).filter(Boolean);
     if(product&&!allowed.some(x=>product.toLowerCase().includes(x)))return json(res,200,{ok:true,ignored:'product'});
-    const orderId=String(val(req.body,['order_id','order.id','sale_id','id','transaction_id','data.order_id','data.id']));
-    const email=String(val(req.body,['customer.email','Customer.email','buyer.email','data.customer.email','data.buyer.email','data.email','email']));
-    const name=String(val(req.body,['customer.name','Customer.full_name','buyer.name','data.customer.name','data.buyer.name','name']));
+    const orderId=String(val(req.body,['order_id','order.id','sale_id','id','transaction_id','data.order_id','data.id','order.order_id','order.order_ref','order.id','order.transaction_id']));
+    const email=String(val(req.body,['customer.email','Customer.email','buyer.email','data.customer.email','data.buyer.email','data.email','email','order.Customer.email','order.customer.email','order.buyer.email']));
+    const name=String(val(req.body,['customer.name','Customer.full_name','buyer.name','data.customer.name','data.buyer.name','name','order.Customer.full_name','order.Customer.first_name','order.customer.name','order.buyer.name']));
     const paid=['paid','approved','compra_aprovada','purchase_approved','order_approved'].some(x=>event.includes(x));
     const revoked=['refunded','refund','chargeback','cancelled','canceled','reembolso'].some(x=>event.includes(x));
     if(paid){
