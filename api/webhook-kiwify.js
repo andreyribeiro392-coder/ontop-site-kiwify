@@ -4,7 +4,7 @@ import {json,safeEqual} from './_security.js';
 import {sendAccessEmail} from './_email.js';
 
 function cleanSecret(value){
-  return String(value||'').trim().replace(/^(['"])(.*)\\1$/,'$2').trim();
+  return String(value||'').trim().replace(/^(['"])(.*)\1$/,'$2').trim();
 }
 
 function requestBodyText(req){
