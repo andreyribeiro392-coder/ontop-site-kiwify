@@ -29,8 +29,9 @@ function signedPayloads(req){
 }
 
 function signatureValid(req){
-  const secret=cleanSecret(process.env.KIWIFY_WEBHOOK_SECRET||process.env.KIWIFY_WEBHOOK_TOKEN);
-  if(!secret)return false;
+  const secrets=[process.env.KIWIFY_WEBHOOK_SECRET,process.env.KIWIFY_WEBHOOK_TOKEN]
+    .map(cleanSecret).filter((value,index,all)=>value&&all.indexOf(value)===index);
+  if(!secrets.length)return false;
   const body=req.body||{};
   const headers=req.headers||{};
   const candidates=[
@@ -46,22 +47,23 @@ function signatureValid(req){
     body.webhook_token
   ].map(cleanSecret).filter(Boolean);
   const payloads=signedPayloads(req);
-  const digests=[];
-  for(const payload of payloads){
-    digests.push(
-      crypto.createHmac('sha1',secret).update(payload).digest('hex'),
-      crypto.createHmac('sha256',secret).update(payload).digest('hex')
-    );
-  }
-  for(const received of candidates){
-    const normalized=received.replace(/^Bearer\\s+/i,'');
-    if(safeEqual(normalized,secret))return true;
-    const bare=normalized.replace(/^sha(?:1|256)=/i,'');
-    if(digests.some(digest=>safeEqual(bare,digest)))return true;
+  for(const secret of secrets){
+    const digests=[];
+    for(const payload of payloads){
+      digests.push(
+        crypto.createHmac('sha1',secret).update(payload).digest('hex'),
+        crypto.createHmac('sha256',secret).update(payload).digest('hex')
+      );
+    }
+    for(const received of candidates){
+      const normalized=received.replace(/^Bearer\\s+/i,'');
+      if(safeEqual(normalized,secret))return true;
+      const bare=normalized.replace(/^sha(?:1|256)=/i,'');
+      if(digests.some(digest=>safeEqual(bare,digest)))return true;
+    }
   }
   return false;
 }
-
 function val(o,paths){
   for(const p of paths){
     let x=o;
