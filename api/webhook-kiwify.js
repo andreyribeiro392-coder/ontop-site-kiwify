@@ -25,7 +25,7 @@ function signedPayloads(req){
 }
 
 function signatureValid(req){
-  const secret=String(process.env.KIWIFY_WEBHOOK_SECRET||'').trim();
+  const secret=String(process.env.KIWIFY_WEBHOOK_SECRET||process.env.KIWIFY_WEBHOOK_TOKEN||'').trim();
   if(!secret)return false;
   const body=req.body||{};
   const headers=req.headers||{};
