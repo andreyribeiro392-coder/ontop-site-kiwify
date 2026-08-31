@@ -59,4 +59,4 @@ function emailHtml({name,code,origin}){
   return `<div style="font-family:Arial;background:#08090c;color:#f5f6f8;padding:32px"><div style="max-width:560px;margin:auto;background:#121419;border:1px solid #513b18;border-radius:22px;padding:30px"><p style="color:#f2b84b;font-weight:800">ONTOP CENTRAL PLUS</p><h1>Seu acesso foi liberado</h1><p>Olá, ${escapeHtml(name||'membro Plus')}.</p><p>Use seu código individual:</p><div style="font-size:24px;font-weight:900;color:#f2b84b">${escapeHtml(code)}</div><p><a href="${escapeHtml(origin||'')}">Acessar Central Plus</a></p></div></div>`;
 }
 
-function escapeHtml(value){return String(value).replace(/[&<>\\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#39;'}[m]))}
+function escapeHtml(value){return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;')}
