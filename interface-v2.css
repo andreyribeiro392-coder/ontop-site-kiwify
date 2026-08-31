@@ -65,3 +65,6 @@ button:hover{transform:translateY(-1px)}
 .toast{border:1px solid rgba(73,223,211,.3)!important;background:#101a26!important}
 @media(max-width:900px){.command-strip{grid-template-columns:repeat(2,1fr)}.dashboard-insights{grid-template-columns:1fr 1fr}.media-results{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){#content{padding:17px 12px 42px}.ontop-cover{padding:24px 18px!important;border-radius:20px!important}.cover-actions{display:grid;grid-template-columns:1fr}.cover-actions button{width:100%}.command-strip{grid-template-columns:1fr 1fr;gap:8px}.command-strip>div{padding:13px 12px}.command-strip strong{font-size:1.35rem}.command-strip span{font-size:.72rem}.main-hub{grid-template-columns:1fr!important}.main-hub button{padding:16px!important}.dashboard-insights{grid-template-columns:1fr}.media-search form{grid-template-columns:1fr}.media-results{grid-template-columns:1fr}.media-card figure{aspect-ratio:16/9}.page-intro{align-items:flex-start!important}.sidebar.open{box-shadow:20px 0 60px rgba(0,0,0,.5)}}
+
+.media-card figure.media-broken{display:grid;place-items:center;background:linear-gradient(145deg,#101827,#0b1018)}
+.media-card figure.media-broken:after{content:"Prévia indisponível";color:#8f9db0;font-size:.84rem}
