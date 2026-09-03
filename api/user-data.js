@@ -1,5 +1,5 @@
-import {getJson,setJson,resolveSession,configured} from './_store.js';
-import {json,cors,deviceId} from './_security.js';
+import {getJson,setJson,resolveSession,configured} from '../lib/_store.js';
+import {json,cors,deviceId} from '../lib/_security.js';
 
 const clean=(value,max=10000)=>String(value||'').trim().slice(0,max);
 function sanitizeChat(value){return Array.isArray(value)?value.slice(-60).map(item=>({role:item?.role==='assistant'?'assistant':'user',text:clean(item?.text),date:clean(item?.date,40)})).filter(item=>item.text):[];}
