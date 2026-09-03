@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';import {getJson,setJson,configured} from '../lib/_store.js';import {json,cors,adminAuthorized} from '../lib/_security.js';
+import crypto from 'node:crypto';import {getJson,setJson,configured} from './_store.js';import {json,cors,adminAuthorized} from './_security.js';
 const KEY='config:products';
 const LEGACY_PRODUCTS=[
  {id:'inicio',tier:'INÍCIO',title:'3 Caminhos para Construir Patrimônio',price:'R$ 19,90',shortDescription:'O primeiro passo para escolher uma direção, organizar suas metas e começar com responsabilidade.',description:'O primeiro passo para escolher uma direção, organizar suas metas e começar com responsabilidade.',url:'https://pay.kiwify.com.br/Mmatzen',cover:'https://raw.githubusercontent.com/andreyribeiro392-coder/ontop-links/main/assets/inicio.png',benefits:['2 e-books práticos','Teste para escolher seu caminho','Plano de ação de 7 dias','Planilha de orçamento e metas'],visible:true},

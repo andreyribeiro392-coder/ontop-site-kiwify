@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import {cors,json} from '../lib/_security.js';
+import {cors,json} from './_security.js';
 
 function noContent(res){res.status(204).end();}
 function makeEnvelope(dsn,payload){

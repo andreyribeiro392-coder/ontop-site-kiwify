@@ -1,4 +1,4 @@
-import {cors} from '../lib/_security.js';
+import {cors} from './_security.js';
 
 export default async function handler(req,res){
   cors(req,res);

@@ -1,2 +1,2 @@
-import {getJson,configured} from '../lib/_store.js';import {json,cors} from '../lib/_security.js';
+import {getJson,configured} from './_store.js';import {json,cors} from './_security.js';
 export default async function handler(req,res){cors(req,res);if(req.method==='OPTIONS')return json(res,204,{});if(req.method!=='GET')return json(res,405,{error:'Método não permitido'});if(!configured())return json(res,200,{announcements:[]});try{return json(res,200,{announcements:(await getJson('config:announcements'))||[]})}catch{return json(res,200,{announcements:[]})}}

@@ -1,5 +1,5 @@
-import {configured,consumeQuotaIfAvailable,resolveSession} from '../lib/_store.js';
-import {cors,deviceId,json} from '../lib/_security.js';
+import {configured,consumeQuotaIfAvailable,resolveSession} from './_store.js';
+import {cors,deviceId,json} from './_security.js';
 
 const DAILY_LIMIT=30;
 const clean=(value,max=100)=>String(value||'').trim().replace(/[<>]/g,'').slice(0,max);
