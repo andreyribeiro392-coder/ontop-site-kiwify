@@ -15,6 +15,52 @@ function ascii(value) {
     .trim();
 }
 
+function normalizeContent(value) {
+  let raw = String(value ?? '').trim();
+  raw = raw.replace(/^```(?:json|markdown|text)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+  raw = raw.replace(/^\s*(?:FERRAMENTA:\s*)?Gerador de PDF\s*(?:\n|$)/i, '').trim();
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed === 'string') {
+        raw = parsed;
+        continue;
+      }
+      if (parsed && typeof parsed === 'object') {
+        const key = ['answer', 'content', 'conteudo', 'conteúdo', 'text', 'texto', 'body'].find((name) => parsed[name] != null);
+        if (key) {
+          raw = String(parsed[key]);
+          continue;
+        }
+      }
+    } catch {
+      // Some models return a JSON-like string. The cleanup below still recovers it.
+    }
+    break;
+  }
+
+  return raw
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
+    .replace(/^\s*(?:FERRAMENTA:\s*)?Gerador de PDF\s*(?:\n|$)/i, '')
+    .replace(/^\s*```(?:markdown|text)?\s*/i, '')
+    .replace(/\s*```\s*$/i, '')
+    .split('\n')
+    .map((line) => line
+      .replace(/^\s*#{1,6}\s*/, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .replace(/^\s*[•*]\s+/, '- ')
+      .trimEnd())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function fileName(value) {
   return (ascii(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || 'ontop-material') + '.pdf';
 }
@@ -70,7 +116,8 @@ function pageStream({ title, subtitle, paragraphs, pageNumber, totalPages, accen
 
 function buildPdf({ title, audience, tone, template, content }) {
   const accent = colorFor(template);
-  const paragraphs = ascii(content || `Este material foi criado para ${audience || 'seu publico'} com uma abordagem ${tone || 'pratica'}.\n\nComece pelo primeiro passo, aplique o que fizer sentido para sua realidade e revise os resultados antes de avancar.`)
+  const cleanContent = normalizeContent(content || `Este material foi criado para ${audience || 'seu publico'} com uma abordagem ${tone || 'pratica'}.\n\nComece pelo primeiro passo, aplique o que fizer sentido para sua realidade e revise os resultados antes de avancar.`);
+  const paragraphs = ascii(cleanContent)
     .slice(0, MAX_TEXT).split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
   const chunks = [];
   for (let i = 0; i < paragraphs.length; i += 5) chunks.push(paragraphs.slice(i, i + 5));
