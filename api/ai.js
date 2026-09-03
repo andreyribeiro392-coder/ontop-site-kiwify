@@ -58,7 +58,7 @@ export default async function handler(req,res){
   async function callGemini(model=GEMINI_MODEL){
    const systemMessage=messages.find(item=>item.role==='system')?.content||'';
    const contents=messages.filter(item=>item.role!=='system').map(item=>({role:item.role==='assistant'?'model':'user',parts:[{text:item.content}]}));
-   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,{method:'POST',signal:AbortSignal.timeout(55000),headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemMessage}]},contents,generationConfig:{temperature:isChat?0.35:(isPdf?0.58:0.45),maxOutputTokens:isPdf?6000:1000}})});
+   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,{method:'POST',signal:AbortSignal.timeout(isPdf?20000:25000),headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemMessage}]},contents,generationConfig:{temperature:isChat?0.35:(isPdf?0.58:0.45),maxOutputTokens:isPdf?6000:1000}})});
    const body=await response.json().catch(()=>({}));
    if(!response.ok){const error=new Error(body?.error?.message||'Gemini indisponível');error.status=response.status;throw error;}
    return {answer:clean(body?.candidates?.[0]?.content?.parts?.map(part=>part?.text||'').join(' '),isPdf?24000:10000),model,provider:'gemini'};
@@ -67,7 +67,7 @@ export default async function handler(req,res){
   if(isPdf){
    if(!process.env.GEMINI_API_KEY){await del(repeatKey);return json(res,503,{error:'O gerador de PDF precisa da GEMINI_API_KEY configurada.'});}
    const models=[...new Set([GEMINI_MODEL,'gemini-2.5-flash','gemini-2.0-flash'])];
-   for(const model of models){try{result=await callGemini(model);if(result?.answer)break;}catch(error){lastError=error;console.error('GEMINI',model,error.status||'',error.message||'');}}
+   for(const model of models){try{result=await callGemini(model);if(result?.answer)break;}catch(error){lastError=error;console.error('GEMINI',model,error.status||'',error.message||'');if(error?.name==='TimeoutError'||!error?.status||error.status>=500)break;}}
    if(result?.answer&&result.answer.replace(/\s/g,'').length<PDF_MIN_CHARS){
     await del(repeatKey);await metric('errors',day);
     return json(res,502,{error:'O Gemini devolveu um conteúdo incompleto. O PDF não foi criado; tente novamente em alguns minutos.'});
@@ -75,7 +75,7 @@ export default async function handler(req,res){
   }
   if(!isPdf&&!result?.answer&&process.env.GROQ_API_KEY){try{result=await callGroq();}catch(error){lastError=error;console.error('GROQ',error.status||'',error.message||'');}}
   if(!result?.answer&&!isPdf&&process.env.GEMINI_API_KEY){try{result=await callGemini();}catch(error){lastError=error;console.error('GEMINI',error.status||'',error.message||'');}}
-  if(!result?.answer){await del(repeatKey);await metric('errors',day);const status=lastError?.status===429?429:502;return json(res,status,{error:status===429?'A IA está temporariamente ocupada. Sua pergunta não consumiu a cota; tente novamente em alguns minutos.':'A IA está temporariamente indisponível. Sua pergunta não consumiu a cota; tente novamente em alguns minutos.'});}
+  if(!result?.answer){await del(repeatKey);await metric('errors',day);const timedOut=lastError?.name==='TimeoutError';const status=lastError?.status===429?429:504;return json(res,status,{error:timedOut?'A Gemini demorou mais que o limite para responder. Tente novamente em alguns minutos.':status===429?'A IA está temporariamente ocupada. Sua pergunta não consumiu a cota; tente novamente em alguns minutos.':'A Gemini recusou a solicitação. Verifique a chave e o modelo configurados na Vercel.'});}
   const answer=result.answer;
   const used=await consumeQuotaIfAvailable(dailyKey,secondsUntilTomorrow(),DAILY_LIMIT);
   if(used<0){await metric('limited',day);return json(res,429,{error:`Você atingiu o limite diário de ${DAILY_LIMIT} respostas. Tente novamente amanhã.`,remaining:0});}
