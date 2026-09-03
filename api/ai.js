@@ -1,5 +1,5 @@
-import {getJson,configured,consumeQuotaIfAvailable,setIfAbsent,resolveSession,del,incr} from '../lib/_store.js';
-import {json,cors,deviceId,hash} from '../lib/_security.js';
+import {getJson,configured,consumeQuotaIfAvailable,setIfAbsent,resolveSession,del,incr} from './_store.js';
+import {json,cors,deviceId,hash} from './_security.js';
 
 const GROQ_MODEL=process.env.GROQ_MODEL||'openai/gpt-oss-20b';
 const GEMINI_MODEL=process.env.GEMINI_MODEL||'gemini-2.5-flash';
