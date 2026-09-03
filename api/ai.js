@@ -55,18 +55,19 @@ export default async function handler(req,res){
    if(!response.ok){const error=new Error(body?.error?.message||'Groq indisponível');error.status=response.status;throw error;}
    return {answer:clean(body?.choices?.[0]?.message?.content,isPdf?24000:10000),model:GROQ_MODEL,provider:'groq'};
   }
-  async function callGemini(){
+  async function callGemini(model=GEMINI_MODEL){
    const systemMessage=messages.find(item=>item.role==='system')?.content||'';
    const contents=messages.filter(item=>item.role!=='system').map(item=>({role:item.role==='assistant'?'model':'user',parts:[{text:item.content}]}));
-   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,{method:'POST',signal:AbortSignal.timeout(55000),headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemMessage}]},contents,generationConfig:{temperature:isChat?0.35:(isPdf?0.58:0.45),maxOutputTokens:isPdf?8192:1000,responseMimeType:isPdf?'text/plain':undefined}})});
+   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`,{method:'POST',signal:AbortSignal.timeout(55000),headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemMessage}]},contents,generationConfig:{temperature:isChat?0.35:(isPdf?0.58:0.45),maxOutputTokens:isPdf?6000:1000}})});
    const body=await response.json().catch(()=>({}));
    if(!response.ok){const error=new Error(body?.error?.message||'Gemini indisponível');error.status=response.status;throw error;}
-   return {answer:clean(body?.candidates?.[0]?.content?.parts?.map(part=>part?.text||'').join(' '),isPdf?24000:10000),model:GEMINI_MODEL,provider:'gemini'};
+   return {answer:clean(body?.candidates?.[0]?.content?.parts?.map(part=>part?.text||'').join(' '),isPdf?24000:10000),model,provider:'gemini'};
   }
   let result=null,lastError=null;
   if(isPdf){
    if(!process.env.GEMINI_API_KEY){await del(repeatKey);return json(res,503,{error:'O gerador de PDF precisa da GEMINI_API_KEY configurada.'});}
-   try{result=await callGemini();}catch(error){lastError=error;console.error('GEMINI',error.status||'',error.message||'');}
+   const models=[...new Set([GEMINI_MODEL,'gemini-2.5-flash','gemini-2.0-flash'])];
+   for(const model of models){try{result=await callGemini(model);if(result?.answer)break;}catch(error){lastError=error;console.error('GEMINI',model,error.status||'',error.message||'');}}
    if(result?.answer&&result.answer.replace(/\s/g,'').length<PDF_MIN_CHARS){
     await del(repeatKey);await metric('errors',day);
     return json(res,502,{error:'O Gemini devolveu um conteúdo incompleto. O PDF não foi criado; tente novamente em alguns minutos.'});
