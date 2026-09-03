@@ -98,3 +98,5 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .tool-legend{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:16px;padding:11px 13px;border:1px solid #3b2362;border-radius:12px;background:#0b0713aa}.tool-legend small{color:#a99cba;margin-right:10px}.tool-kind{font-size:10px!important;letter-spacing:.05em;font-weight:800;border-radius:999px;padding:6px 9px!important}
 .modal-box .input-rule{border-left:3px solid #a855f7;padding-left:11px;line-height:1.55}.modal-box .result{min-height:42px;display:flex;align-items:center;line-height:1.5}
 @media(max-width:560px){.welcome-value:after{display:none}.welcome-value{padding:18px!important}.welcome-value h3{font-size:19px}.tool-legend{align-items:flex-start;gap:7px}.tool-legend small{width:100%;margin:0 0 6px}}
+.pdf-home-action{border-color:#a855f7!important;color:#f0d9ff!important;box-shadow:0 0 18px #7c3aed33}.pdf-home-action:before{content:'▤';margin-right:6px;color:#d8b4fe}
+@media(max-width:560px){.pdf-home-action{font-size:10px!important;padding:8px 9px!important}.top-actions{gap:6px!important}.pdf-home-action:before{margin-right:3px}}
