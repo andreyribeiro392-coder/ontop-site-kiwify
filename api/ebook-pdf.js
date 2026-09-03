@@ -1,5 +1,5 @@
-import { resolveSession } from './_store.js';
-import { cors, json } from './_security.js';
+import { resolveSession } from '../lib/_store.js';
+import { cors, json } from '../lib/_security.js';
 
 const MAX_TEXT = 18000;
 
