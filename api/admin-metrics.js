@@ -1,3 +1,3 @@
-import {getJson,configured} from './_store.js';
-import {json,cors,adminAuthorized} from './_security.js';
+import {getJson,configured} from '../lib/_store.js';
+import {json,cors,adminAuthorized} from '../lib/_security.js';
 export default async function handler(req,res){cors(req,res);if(req.method==='OPTIONS')return json(res,204,{});if(req.method!=='GET')return json(res,405,{error:'Método não permitido.'});if(!adminAuthorized(req))return json(res,401,{error:'Senha administrativa incorreta.'});if(!configured())return json(res,503,{error:'Banco não configurado.'});try{const day=new Date(Date.now()-3*60*60*1000).toISOString().slice(0,10),names=['requests','success','errors','limited'];const values=await Promise.all([...names.map(name=>getJson(`metrics:ai:${name}`)),...names.map(name=>getJson(`metrics:ai:${day}:${name}`))]);return json(res,200,{ok:true,total:Object.fromEntries(names.map((name,index)=>[name,Number(values[index])||0])),today:Object.fromEntries(names.map((name,index)=>[name,Number(values[index+names.length])||0]))});}catch(error){console.error(error);return json(res,500,{error:'Falha ao carregar métricas.'});}}

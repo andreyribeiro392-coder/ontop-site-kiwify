@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
-import {createAccess,getJson,updateAccess,configured} from './_store.js';
-import {json,safeEqual} from './_security.js';
-import {sendAccessEmail} from './_email.js';
+import {createAccess,getJson,updateAccess,configured} from '../lib/_store.js';
+import {json,safeEqual} from '../lib/_security.js';
+import {sendAccessEmail} from '../lib/_email.js';
 
 function cleanSecret(value){
   return String(value||'').trim().replace(/^(['"])(.*)\1$/,'$2').trim();
