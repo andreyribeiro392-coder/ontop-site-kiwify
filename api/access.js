@@ -44,7 +44,7 @@ async function googleStart(req,res,query){
  const state=hash(String(globalThis.crypto?.randomUUID?.()||Date.now()+'-'+Math.random()));
  const email=normalizeEmail(query.get('email')||'');
  await setJson('google:oauth:'+state,{email,expiresAt:Date.now()+600000});
- const params=new URLSearchParams({client_id:clientId,redirect_uri:googleRedirectUri,response_type:'code',scope:'openid email profile',state,access_type:'online',prompt:'select_account'});
+ const params=new URLSearchParams({client_id:clientId,redirect_uri:googleRedirectUri,response_type:'code',scope:'openid email profile',state,access_type:'online',prompt:'select_account'});if(email)params.set('login_hint',email);
  return redirectTo(res,'https://accounts.google.com/o/oauth2/v2/auth?'+params.toString());
 }
 async function googleCallback(req,res,query){
