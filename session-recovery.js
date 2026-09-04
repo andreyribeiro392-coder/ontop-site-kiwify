@@ -20,12 +20,24 @@
   function loadGoogleScript(){
     if(window.google?.accounts?.id)return Promise.resolve();
     return new Promise((resolve,reject)=>{
+      let settled=false;
+      const finish=(error)=>{
+        if(settled)return;settled=true;clearTimeout(timer);
+        error?reject(error):resolve();
+      };
+      const timer=setTimeout(()=>finish(new Error('O Google demorou para carregar. Toque novamente para tentar.')),8000);
+      const check=()=>window.google?.accounts?.id?finish():finish(new Error('O navegador bloqueou o login Google. Permita accounts.google.com e tente novamente.'));
       const existing=document.querySelector('script[data-google-identity],script[src*="accounts.google.com/gsi/client"]');
-      if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}
+      if(existing){
+        if(window.google?.accounts?.id)return finish();
+        existing.addEventListener('load',check,{once:true});
+        existing.addEventListener('error',()=>finish(new Error('Não foi possível carregar o Google.')),{once:true});
+        return;
+      }
       const script=document.createElement('script');
       script.src='https://accounts.google.com/gsi/client';
       script.async=true;script.defer=true;script.dataset.googleIdentity='1';
-      script.onload=resolve;script.onerror=()=>reject(new Error('Não foi possível carregar o Google.'));
+      script.onload=check;script.onerror=()=>finish(new Error('Não foi possível carregar o Google.'));
       document.head.appendChild(script);
     });
   }
