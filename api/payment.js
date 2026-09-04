@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
-import {createAccess,getJson,updateAccess,configured} from '../lib/_store.js';
-import {json} from '../lib/_security.js';
+import {createAccess,getJson,updateAccess,configured,createSession,publicAccess} from '../lib/_store.js';
+import {json,deviceId} from '../lib/_security.js';
 import {sendAccessEmail} from '../lib/_email.js';
 
 const MP_API='https://api.mercadopago.com';
@@ -54,39 +54,64 @@ async function createPreference(req,res){
 function notificationId(req,body){
   return clean(body.data?.id||body.id||req.query?.id||req.query?.['data.id']);
 }
+async function deliverAccess(access,payment,req){
+  const current=await getJson('access:'+access.code);
+  if(current?.delivery?.sent)return current;
+  const payer=payment.payer||{};
+  const email=clean(payer.email||access.email).toLowerCase();
+  const name=clean([payer.first_name,payer.last_name].filter(Boolean).join(' '))||access.name;
+  let delivery={sent:false};
+  try{
+    delivery=await sendAccessEmail({email,name,code:access.code,origin:originFor(req)});
+    return await updateAccess(access.code,{email,name,delivery,paymentId:String(payment.id),paymentStatus:'approved'});
+  }catch(error){
+    return await updateAccess(access.code,{email,name,delivery:{sent:false,error:String(error.message)},paymentId:String(payment.id),paymentStatus:'approved'});
+  }
+}
+async function grantApprovedPayment(paymentId,req,{createBrowserSession=false}={}){
+  const payment=await mercado('/v1/payments/'+encodeURIComponent(paymentId));
+  const externalReference=clean(payment.external_reference);
+  if(!externalReference.startsWith('ontop-plus-'))return {ok:true,ignored:'external_reference'};
+  const status=clean(payment.status).toLowerCase();
+  const prior=await getJson('order:'+externalReference);
+  if(status!=='approved'){
+    if(['refunded','charged_back','cancelled','canceled'].includes(status)&&prior){
+      await updateAccess(prior.code,{status:'blocked',blockedReason:'mercadopago_'+status,paymentId:String(paymentId),paymentStatus:status});
+      return {ok:true,revoked:true,status};
+    }
+    return {ok:true,ignored:'payment_status',status};
+  }
+  let access=prior?await getJson('access:'+prior.code):null;
+  let duplicate=Boolean(access);
+  if(!access){
+    const payer=payment.payer||{};
+    const email=clean(payer.email).toLowerCase();
+    const name=clean([payer.first_name,payer.last_name].filter(Boolean).join(' '));
+    access=await createAccess({email,name,orderId:externalReference,source:'mercadopago'});
+  }
+  access=await deliverAccess(access,payment,req);
+  const result={ok:true,code:access.code,duplicate,emailSent:Boolean(access.delivery?.sent)};
+  if(createBrowserSession){
+    const session=await createSession(access.code,deviceId(req));
+    result.session=session.token;
+    result.sessionExpiresAt=session.expiresAt;
+    result.access=publicAccess(access);
+  }
+  return result;
+}
 async function processNotification(req,res){
   const body=bodyFor(req);
   const id=notificationId(req,body);
   if(!id)return json(res,200,{ok:true,ignored:'notification_without_payment_id'});
-  const payment=await mercado('/v1/payments/'+encodeURIComponent(id));
-  const externalReference=clean(payment.external_reference);
-  if(!externalReference.startsWith('ontop-plus-'))return json(res,200,{ok:true,ignored:'external_reference'});
-  const status=clean(payment.status).toLowerCase();
-  const prior=await getJson('order:'+externalReference);
-  if(status==='approved'){
-    if(prior){
-      const existing=await getJson('access:'+prior.code);
-      return json(res,200,{ok:true,duplicate:true,code:prior.code,emailSent:Boolean(existing?.delivery?.sent)});
-    }
-    const payer=payment.payer||{};
-    const email=clean(payer.email).toLowerCase();
-    const name=clean([payer.first_name,payer.last_name].filter(Boolean).join(' '));
-    const access=await createAccess({email,name,orderId:externalReference,source:'mercadopago'});
-    let delivery={sent:false};
-    try{
-      delivery=await sendAccessEmail({email,name,code:access.code,origin:originFor(req)});
-      await updateAccess(access.code,{delivery,paymentId:String(id),paymentStatus:status});
-    }catch(error){
-      await updateAccess(access.code,{delivery:{sent:false,error:String(error.message)},paymentId:String(id),paymentStatus:status});
-    }
-    return json(res,200,{ok:true,code:access.code,emailSent:delivery.sent});
-  }
-  if(['refunded','charged_back','cancelled','canceled'].includes(status)&&prior){
-    const existing=await getJson('access:'+prior.code);
-    if(existing)await updateAccess(prior.code,{status:'blocked',blockedReason:'mercadopago_'+status,paymentId:String(id),paymentStatus:status});
-    return json(res,200,{ok:true,revoked:true});
-  }
-  return json(res,200,{ok:true,ignored:'payment_status',status});
+  return json(res,200,await grantApprovedPayment(id,req));
+}
+async function activateFromReturn(req,res){
+  const body=bodyFor(req);
+  const id=clean(body.paymentId||body.payment_id||req.query?.payment_id||req.query?.collection_id);
+  if(!id)return json(res,400,{error:'Pagamento não identificado.'});
+  const result=await grantApprovedPayment(id,req,{createBrowserSession:true});
+  if(!result.session)return json(res,409,{error:'O pagamento ainda não foi aprovado. Aguarde a confirmação do Mercado Pago.'});
+  return json(res,200,result);
 }
 export default async function handler(req,res){
   cors(res);
@@ -96,6 +121,7 @@ export default async function handler(req,res){
     const body=bodyFor(req);
     if(body.action==='create')return await createPreference(req,res);
     if(!configured())return json(res,503,{error:'O armazenamento do acesso ainda não está configurado.'});
+    if(body.action==='activate')return await activateFromReturn(req,res);
     return await processNotification(req,res);
   }catch(error){
     console.error('[payment]',error);
