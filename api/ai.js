@@ -6,6 +6,8 @@ const normalizeGeminiModel=value=>String(value||'').trim().replace(/^models\//,'
 const GEMINI_KEY=String(process.env.GEMINI_API_KEY||'').trim();
 const GEMINI_MODEL=normalizeGeminiModel(process.env.GEMINI_MODEL||'gemini-3.6-flash');
 const DAILY_LIMIT=20;
+const PREVIEW_AI_LIMIT=5;
+const PREVIEW_PDF_LIMIT=2;
 const PDF_MIN_CHARS=9000;
 const clean=(value,max=600)=>String(value||'').trim().slice(0,max);
 const letters=value=>(clean(value).match(/\p{L}/gu)||[]).length;
@@ -20,17 +22,29 @@ export default async function handler(req,res){
  if(!process.env.GROQ_API_KEY&&!GEMINI_KEY)return json(res,503,{error:'A inteligência artificial ainda não foi configurada.'});
  if(!configured())return json(res,503,{error:'O banco de dados ainda não foi configurado.'});
  try{
-  const current=await resolveSession(String(req.body?.session||''));
+  const sessionValue=String(req.body?.session||'');
   const device=deviceId(req);
-  if(!current||current.device!==device)return json(res,401,{error:'Sessão expirada. Entre novamente com seu código.'});
-  const {code,access}=current;
-  if(access.status!=='active')return json(res,401,{error:'Acesso inválido ou bloqueado.'});
-  if(access.expiresAt&&Date.parse(access.expiresAt)<Date.now())return json(res,403,{error:'Este acesso expirou.'});
-  if(!Array.isArray(access.devices)||!access.devices.includes(device))return json(res,401,{error:'Valide novamente o código neste aparelho.'});
+  const preview=!sessionValue;
+  let code,access;
+  if(preview){
+    code='preview-'+device;
+    access={status:'active',expiresAt:null,devices:[device]};
+  }else{
+    const current=await resolveSession(sessionValue);
+    if(!current||current.device!==device)return json(res,401,{error:'Sessão expirada. Entre novamente.'});
+    code=current.code;access=current.access;
+    if(access.status!=='active')return json(res,401,{error:'Acesso inválido ou bloqueado.'});
+    if(access.expiresAt&&Date.parse(access.expiresAt)<Date.now())return json(res,403,{error:'Este acesso expirou.'});
+    if(!Array.isArray(access.devices)||!access.devices.includes(device))return json(res,401,{error:'Valide novamente o acesso neste aparelho.'});
+  }
+  const title=clean(req.body?.title,100);
+  const isPdfRequest=title==='Gerador de PDF';
+  const quotaLimit=isPdfRequest?(preview?PREVIEW_PDF_LIMIT:DAILY_LIMIT):(preview?PREVIEW_AI_LIMIT:DAILY_LIMIT);
+  const quotaPrefix=isPdfRequest?'pdf':'ai';
   const day=brazilDay();
-  const dailyKey=`ai:${day}:${hash(code).slice(0,20)}`;
-  if(req.body?.mode==='status'){const used=Number(await getJson(dailyKey))||0;return json(res,200,{ok:true,used,remaining:Math.max(0,DAILY_LIMIT-used),limit:DAILY_LIMIT});}
-  const title=clean(req.body?.title,100);const niche=clean(req.body?.niche,100)||'Negócios e produtos digitais';
+  const dailyKey=quotaPrefix+':'+day+':'+hash(code).slice(0,20);
+  if(req.body?.mode==='status'){const used=Number(await getJson(dailyKey))||0;return json(res,200,{ok:true,used,remaining:Math.max(0,quotaLimit-used),limit:quotaLimit,preview});}
+  const niche=clean(req.body?.niche,100)||'Negócios e produtos digitais';
   const entries=Array.isArray(req.body?.fields)?req.body.fields.slice(0,8).map(item=>({label:clean(item?.label,80),value:clean(item?.value,600),type:item?.type==='number'?'number':'text'})):[];
   const history=Array.isArray(req.body?.history)?req.body.history.slice(-8).map(item=>({role:item?.role==='assistant'?'assistant':'user',content:clean(item?.text,900)})).filter(item=>item.content):[];
   if(!title||!entries.length)return json(res,400,{error:'Ferramenta ou respostas ausentes.'});
@@ -39,7 +53,7 @@ export default async function handler(req,res){
   const invalidNumber=entries.find(item=>item.type==='number'&&(!Number.isFinite(Number(item.value))||Number(item.value)<0));
   if(invalidNumber)return json(res,400,{error:`${invalidNumber.label||'O valor'} precisa ser um número válido.`});
   const usedBefore=Number(await getJson(dailyKey))||0;
-  if(usedBefore>=DAILY_LIMIT){await metric('limited',day);return json(res,429,{error:`Você atingiu o limite diário de ${DAILY_LIMIT} respostas. Tente novamente amanhã.`,remaining:0});}
+  if(usedBefore>=quotaLimit){await metric('limited',day);return json(res,429,{error:`Você atingiu o limite diário de ${quotaLimit} ${isPdf?'PDFs':'respostas'} Tente novamente amanhã.`,remaining:0});}
   const fingerprint=hash(`${code}|${title}|${entries.map(item=>item.value.toLowerCase()).join('|')}`).slice(0,32);
   const repeatKey=`ai:repeat:${fingerprint}`;
   if(!await setIfAbsent(repeatKey,90))return json(res,429,{error:'Esta solicitação já foi enviada. Aguarde 90 segundos ou altere as respostas antes de gerar novamente.'});
@@ -79,8 +93,8 @@ export default async function handler(req,res){
   if(!result?.answer&&!isPdf&&process.env.GEMINI_API_KEY){try{result=await callGemini();}catch(error){lastError=error;console.error('GEMINI',error.status||'',error.message||'');}}
   if(!result?.answer){await del(repeatKey);await metric('errors',day);const timedOut=lastError?.name==='TimeoutError';const overloaded=lastError?.status===500||lastError?.status===503;const status=lastError?.status===429?429:504;const detail=String(lastError?.message||'').replace(/[\\r\\n]+/g,' ').slice(0,220);return json(res,status,{error:timedOut?'A Gemini demorou mais que o limite para responder. Tente novamente em alguns minutos.':status===429?'A IA está temporariamente ocupada. Sua pergunta não consumiu a cota; tente novamente em alguns minutos.':overloaded?'A Gemini está temporariamente sobrecarregada. Tente novamente em alguns minutos.':`A Gemini recusou a solicitação${detail?`: ${detail}`:'. Verifique a chave e o modelo configurados na Vercel.'}`});}
   const answer=result.answer;
-  const used=await consumeQuotaIfAvailable(dailyKey,secondsUntilTomorrow(),DAILY_LIMIT);
-  if(used<0){await metric('limited',day);return json(res,429,{error:`Você atingiu o limite diário de ${DAILY_LIMIT} respostas. Tente novamente amanhã.`,remaining:0});}
+  const used=await consumeQuotaIfAvailable(dailyKey,secondsUntilTomorrow(),quotaLimit);
+  if(used<0){await metric('limited',day);return json(res,429,{error:`Você atingiu o limite diário de ${quotaLimit} ${isPdf?'PDFs':'respostas'} Tente novamente amanhã.`,remaining:0});}
   await metric('success',day);
   return json(res,200,{ok:true,answer,remaining:Math.max(0,DAILY_LIMIT-used),model:result.model,provider:result.provider});
  }catch(error){console.error(error);return json(res,500,{error:error?.name==='TimeoutError'?'A IA demorou demais. Sua pergunta não consumiu a cota; tente novamente.':'A IA está temporariamente indisponível. Sua pergunta não consumiu a cota; tente novamente.'});}
