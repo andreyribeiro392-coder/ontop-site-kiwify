@@ -68,7 +68,7 @@ export default async function handler(req,res){
   let result=null,lastError=null;
   if(isPdf){
    if(!GEMINI_KEY){await del(repeatKey);return json(res,503,{error:'O gerador de PDF precisa da GEMINI_API_KEY configurada.'});}
-   const models=[...new Set(['gemini-3.6-flash',GEMINI_MODEL,'gemini-2.5-flash','gemini-2.5-flash-lite'].map(normalizeGeminiModel).filter(model=>model&&model!=='gemini-2.0-flash'))];
+   const models=[...new Set(['gemini-3.6-flash','gemini-3.5-flash-lite',GEMINI_MODEL,'gemini-2.5-flash'].map(normalizeGeminiModel).filter(model=>model&&model!=='gemini-2.0-flash'&&model!=='gemini-2.5-flash-lite'))];
    for(const model of models){try{result=await callGemini(model);if(result?.answer)break;}catch(error){lastError=error;console.error('GEMINI',model,error.status||'',error.message||'');if(error?.name==='TimeoutError'||!error?.status)break;}}
    if(result?.answer&&result.answer.replace(/\s/g,'').length<PDF_MIN_CHARS){
     await del(repeatKey);await metric('errors',day);
