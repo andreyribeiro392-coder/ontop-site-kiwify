@@ -16,7 +16,11 @@
       const text=el.textContent||'';
       const next=text.replace(/limite de 20 por dia/gi,'limite de 5 na prévia')
         .replace(/consome 1 das 20 perguntas diárias/gi,'consome 1 das 5 respostas da prévia')
-        .replace(/Limite: 20 respostas por dia/gi,'Limite: 5 respostas na prévia');
+        .replace(/Limite: 20 respostas por dia/gi,'Limite: 5 respostas na prévia')
+        .replace(/até 20 respostas?/gi,'até 5 respostas')
+        .replace(/20 respostas? da IA por dia/gi,'5 respostas da IA na prévia')
+        .replace(/20 respostas? por dia/gi,'5 respostas na prévia')
+        .replace(/20 perguntas? por dia/gi,'5 respostas na prévia');
       if(next!==text)el.textContent=next;
     });
   }
