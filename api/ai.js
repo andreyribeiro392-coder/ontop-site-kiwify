@@ -69,7 +69,7 @@ export default async function handler(req,res){
   if(isPdf){
    if(!GEMINI_KEY){await del(repeatKey);return json(res,503,{error:'O gerador de PDF precisa da GEMINI_API_KEY configurada.'});}
    const models=[...new Set(['gemini-3.6-flash',GEMINI_MODEL,'gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash'].map(normalizeGeminiModel).filter(Boolean))];
-   for(const model of models){try{result=await callGemini(model);if(result?.answer)break;}catch(error){lastError=error;console.error('GEMINI',model,error.status||'',error.message||'');if(error?.name==='TimeoutError'||!error?.status||error.status>=500)break;}}
+   for(const model of models){try{result=await callGemini(model);if(result?.answer)break;}catch(error){lastError=error;console.error('GEMINI',model,error.status||'',error.message||'');if(error?.name==='TimeoutError'||!error?.status)break;}}
    if(result?.answer&&result.answer.replace(/\s/g,'').length<PDF_MIN_CHARS){
     await del(repeatKey);await metric('errors',day);
     return json(res,502,{error:'O Gemini devolveu um conteúdo incompleto. O PDF não foi criado; tente novamente em alguns minutos.'});
@@ -77,7 +77,7 @@ export default async function handler(req,res){
   }
   if(!isPdf&&!result?.answer&&process.env.GROQ_API_KEY){try{result=await callGroq();}catch(error){lastError=error;console.error('GROQ',error.status||'',error.message||'');}}
   if(!result?.answer&&!isPdf&&process.env.GEMINI_API_KEY){try{result=await callGemini();}catch(error){lastError=error;console.error('GEMINI',error.status||'',error.message||'');}}
-  if(!result?.answer){await del(repeatKey);await metric('errors',day);const timedOut=lastError?.name==='TimeoutError';const status=lastError?.status===429?429:504;const detail=String(lastError?.message||'').replace(/[\\r\\n]+/g,' ').slice(0,220);return json(res,status,{error:timedOut?'A Gemini demorou mais que o limite para responder. Tente novamente em alguns minutos.':status===429?'A IA está temporariamente ocupada. Sua pergunta não consumiu a cota; tente novamente em alguns minutos.':`A Gemini recusou a solicitação${detail?`: ${detail}`:'. Verifique a chave e o modelo configurados na Vercel.'}`});}
+  if(!result?.answer){await del(repeatKey);await metric('errors',day);const timedOut=lastError?.name==='TimeoutError';const overloaded=lastError?.status===500||lastError?.status===503;const status=lastError?.status===429?429:504;const detail=String(lastError?.message||'').replace(/[\\r\\n]+/g,' ').slice(0,220);return json(res,status,{error:timedOut?'A Gemini demorou mais que o limite para responder. Tente novamente em alguns minutos.':status===429?'A IA está temporariamente ocupada. Sua pergunta não consumiu a cota; tente novamente em alguns minutos.':overloaded?'A Gemini está temporariamente sobrecarregada. Tente novamente em alguns minutos.':`A Gemini recusou a solicitação${detail?`: ${detail}`:'. Verifique a chave e o modelo configurados na Vercel.'}`});}
   const answer=result.answer;
   const used=await consumeQuotaIfAvailable(dailyKey,secondsUntilTomorrow(),DAILY_LIMIT);
   if(used<0){await metric('limited',day);return json(res,429,{error:`Você atingiu o limite diário de ${DAILY_LIMIT} respostas. Tente novamente amanhã.`,remaining:0});}
