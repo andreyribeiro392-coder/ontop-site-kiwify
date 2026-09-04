@@ -55,7 +55,7 @@
     document.body.classList.add('google-auth-active');
     const screen=document.createElement('div');
     screen.id='email-auth-overlay';
-    screen.innerHTML='<main id="email-auth-card" role="dialog" aria-modal="true" aria-labelledby="email-auth-title"><div class="email-brand">ONTOP CENTRAL PLUS</div><h1 id="email-auth-title">Crie sua conta</h1><p id="email-auth-copy">Entre com seu e-mail e use sua conta Google para acessar a Central. Se o e-mail já tiver uma compra ativa, o Plano Plus será liberado automaticamente.</p><label for="google-email-input">Seu e-mail</label><input id="google-email-input" type="email" autocomplete="email" inputmode="email" placeholder="voce@exemplo.com"><div class="auth-divider"><span>ou</span></div><div id="google-auth-button" aria-label="Criar conta com Google"><button id="google-auth-fallback" type="button">Criar conta com Google</button></div><div class="email-message" id="email-auth-message" role="status"></div><p class="email-hint">O Google confirma sua identidade com segurança. Não pediremos sua senha.</p></main>';
+    screen.innerHTML='<main id="email-auth-card" role="dialog" aria-modal="true" aria-labelledby="email-auth-title"><div class="email-brand">ONTOP CENTRAL PLUS</div><h1 id="email-auth-title">Entrar com o Google</h1><p id="email-auth-copy">Use seu e-mail para continuar com segurança. A conta Google será confirmada na próxima tela.</p><label for="google-email-input">Seu e-mail</label><input id="google-email-input" type="email" autocomplete="email" inputmode="email" placeholder="voce@exemplo.com"><div class="auth-divider"><span>ou</span></div><button id="google-auth-fallback" type="button">Continuar com Google</button><div class="email-message" id="email-auth-message" role="status"></div><p class="email-hint">Você será levado à tela oficial do Google. Não pediremos sua senha aqui.</p></main>';
     document.body.appendChild(screen);
     const button=screen.querySelector('#google-auth-button');
     const fallback=screen.querySelector('#google-auth-fallback');
@@ -104,8 +104,7 @@
       }
     }
     if(fallback)fallback.onclick=()=>{const email=normalizeEmail(emailInput.value);window.location.href='/api/access?action=google-start'+(email?'&email='+encodeURIComponent(email):'');};
-    emailInput.focus();
-    start(false);
+    emailInput.addEventListener('keydown',event=>{if(event.key==='Enter')fallback?.click();});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>mount(0),350));else setTimeout(()=>mount(0),350);
 })();
