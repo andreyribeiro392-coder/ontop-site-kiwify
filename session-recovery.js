@@ -11,21 +11,20 @@
   };
 })();
 
-/* Google sign-in gate */
+
+/* Separate Google sign-in screen */
 (function(){
   const SESSION_KEY='ontop-session';
   const GOOGLE_KEY='ontop-google-email';
-  const $=(root,selector)=>root.querySelector(selector);
-  function alreadyVerified(){return Boolean(localStorage.getItem(SESSION_KEY)||localStorage.getItem(GOOGLE_KEY));}
+  const normalizeEmail=value=>String(value||'').trim().toLowerCase();
+  const validEmail=value=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+  const alreadyVerified=()=>Boolean(localStorage.getItem(SESSION_KEY)||localStorage.getItem(GOOGLE_KEY));
   function loadGoogleScript(){
     if(window.google?.accounts?.id)return Promise.resolve();
     return new Promise((resolve,reject)=>{
       let settled=false;
-      const finish=(error)=>{
-        if(settled)return;settled=true;clearTimeout(timer);
-        error?reject(error):resolve();
-      };
       const timer=setTimeout(()=>finish(new Error('O Google demorou para carregar. Toque novamente para tentar.')),8000);
+      const finish=error=>{if(settled)return;settled=true;clearTimeout(timer);error?reject(error):resolve();};
       const check=()=>window.google?.accounts?.id?finish():finish(new Error('O navegador bloqueou o login Google. Permita accounts.google.com e tente novamente.'));
       const existing=document.querySelector('script[data-google-identity],script[src*="accounts.google.com/gsi/client"]');
       if(existing){
@@ -43,48 +42,62 @@
   }
   function mount(attempt){
     if(alreadyVerified()||document.querySelector('#email-auth-overlay'))return;
-    if(!document.querySelector('#app')){if(attempt<20)setTimeout(()=>mount(attempt+1),300);return;}
-    localStorage.removeItem('ontop-email-verified');
-    const overlay=document.createElement('div');
-    overlay.id='email-auth-overlay';
-    overlay.innerHTML='<section id="email-auth-card" role="dialog" aria-modal="true" aria-labelledby="email-auth-title"><div class="email-brand">ONTOP CENTRAL PLUS</div><h1 id="email-auth-title">Entre com o Google</h1><p id="email-auth-copy">Use sua conta Google para acessar a prévia gratuita. Se o e-mail já tiver uma compra ativa, o Plano Plus será liberado automaticamente.</p><div id="google-auth-button" aria-label="Entrar com Google"><button id="google-auth-fallback" type="button">Continuar com Google</button></div><div class="email-message" id="email-auth-message" role="status"></div><p class="email-hint">Seu e-mail será usado apenas para reconhecer o acesso e salvar seu progresso.</p></section>';
-    document.body.appendChild(overlay);
-    const button=$('#google-auth-button'),message=$('#email-auth-message'),fallback=$('#google-auth-fallback');
+    const app=document.querySelector('#app');
+    if(!app){if(attempt<30)setTimeout(()=>mount(attempt+1),300);return;}
+    app.classList.add('hidden');
+    document.body.classList.add('google-auth-active');
+    const screen=document.createElement('div');
+    screen.id='email-auth-overlay';
+    screen.innerHTML='<main id="email-auth-card" role="dialog" aria-modal="true" aria-labelledby="email-auth-title"><div class="email-brand">ONTOP CENTRAL PLUS</div><h1 id="email-auth-title">Crie sua conta</h1><p id="email-auth-copy">Entre com seu e-mail e use sua conta Google para acessar a Central. Se o e-mail já tiver uma compra ativa, o Plano Plus será liberado automaticamente.</p><label for="google-email-input">Seu e-mail</label><input id="google-email-input" type="email" autocomplete="email" inputmode="email" placeholder="voce@exemplo.com"><div class="auth-divider"><span>ou</span></div><div id="google-auth-button" aria-label="Criar conta com Google"><button id="google-auth-fallback" type="button">Criar conta com Google</button></div><div class="email-message" id="email-auth-message" role="status"></div><p class="email-hint">O Google confirma sua identidade com segurança. Não pediremos sua senha.</p></main>';
+    document.body.appendChild(screen);
+    const button=screen.querySelector('#google-auth-button');
+    const fallback=screen.querySelector('#google-auth-fallback');
+    const emailInput=screen.querySelector('#google-email-input');
+    const message=screen.querySelector('#email-auth-message');
     let busy=false;
+    let ready=false;
     async function call(credential){
       const response=await fetch('/api/access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'google-login',credential})});
       const body=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(body.error||'Não foi possível concluir agora.');
       return body;
     }
-    async function start(){
+    async function start(openPrompt=false){
+      if(busy&&!openPrompt)return;
       message.textContent='Carregando login Google...';
       try{
         const configResponse=await fetch('/api/access');
         const config=await configResponse.json().catch(()=>({}));
-        if(!config.googleClientId){message.textContent='O login Google ainda não foi configurado. Adicione GOOGLE_CLIENT_ID na Vercel.';return;}
+        if(!config.googleClientId){message.textContent='O login Google ainda não foi configurado na Vercel.';return;}
         await loadGoogleScript();
-        button.innerHTML='';
-        window.google.accounts.id.initialize({client_id:config.googleClientId,ux_mode:'popup',callback:async response=>{
-          if(busy)return;busy=true;message.textContent='Confirmando sua conta...';
-          try{
-            const body=await call(response.credential);
-            localStorage.setItem(GOOGLE_KEY,body.email||'');
-            if(body.session){localStorage.setItem(SESSION_KEY,body.session);location.reload();return;}
-            overlay.remove();
-            window.dispatchEvent(new CustomEvent('ontop-email-verified'));
-          }catch(error){message.textContent=error.message;busy=false;}
-        }});
-        window.google.accounts.id.renderButton(button,{theme:'filled_black',size:'large',text:'continue_with',shape:'pill',width:Math.min(360,Math.max(260,button.clientWidth||320))});
-        window.google.accounts.id.prompt();
+        if(!ready){
+          button.innerHTML='';
+          window.google.accounts.id.initialize({client_id:config.googleClientId,ux_mode:'popup',callback:async response=>{
+            if(busy)return;
+            busy=true;message.textContent='Confirmando sua conta...';
+            try{
+              const body=await call(response.credential);
+              const typed=normalizeEmail(emailInput.value);
+              if(typed&&typed!==normalizeEmail(body.email)){message.textContent='Use o mesmo e-mail selecionado na conta Google.';busy=false;return;}
+              localStorage.setItem(GOOGLE_KEY,body.email||typed);
+              if(body.session){localStorage.setItem(SESSION_KEY,body.session);location.reload();return;}
+              screen.remove();app.classList.remove('hidden');document.body.classList.remove('google-auth-active');window.dispatchEvent(new CustomEvent('ontop-email-verified'));
+            }catch(error){message.textContent=error.message;busy=false;}
+          }});
+          window.google.accounts.id.renderButton(button,{theme:'filled_black',size:'large',text:'signup_with',shape:'pill',width:Math.min(360,Math.max(260,button.clientWidth||320))});
+          ready=true;
+        }
+        if(openPrompt)window.google.accounts.id.prompt();
+        message.textContent='';
       }catch(error){
-        if(button&&!button.querySelector('button'))button.innerHTML='<button id="google-auth-fallback" type="button">Continuar com Google</button>';
-        const retry=button?.querySelector('#google-auth-fallback');if(retry)retry.onclick=()=>start();
+        if(button&&!button.querySelector('button'))button.innerHTML='<button id="google-auth-fallback" type="button">Criar conta com Google</button>';
+        const retry=button?.querySelector('#google-auth-fallback');if(retry)retry.onclick=()=>start(true);
         message.textContent=error.message||'Não foi possível carregar o login Google.';
       }
     }
-    if(fallback)fallback.onclick=()=>start();
-    start();
+    if(fallback)fallback.onclick=()=>start(true);
+    emailInput.focus();
+    start(false);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>mount(0),500));else setTimeout(()=>mount(0),500);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>mount(0),350));else setTimeout(()=>mount(0),350);
 })();
