@@ -14,7 +14,7 @@ const letters=value=>(clean(value).match(/\p{L}/gu)||[]).length;
 function brazilDay(){return new Date(Date.now()-3*60*60*1000).toISOString().slice(0,10);}
 function padPdfAnswer(answer,entries){
  let output=String(answer||'').trim();
- if(output.replace(/\\s/g,'').length>=9000)return output;
+ if(output.replace(/\s/g,'').length>=9000)return output;
  const context=entries.map(item=>item.label+': '+item.value).join(' · ').slice(0,900);
  const appendix=[
   'APÊNDICE PRÁTICO — COMO USAR ESTE MATERIAL',
@@ -31,8 +31,8 @@ function padPdfAnswer(answer,entries){
   'Conclusão do apêndice: este complemento foi criado para tornar o conteúdo mais acionável. Ele não substitui avaliação individual, suporte especializado ou fontes oficiais quando esses cuidados forem necessários. Use-o como roteiro de estudo, adaptação e acompanhamento.'
  ];
  let index=0;
- while(output.replace(/\\s/g,'').length<9000){
-  output+='\\n\\n'+appendix[index%appendix.length];
+ while(output.replace(/\s/g,'').length<9000){
+  output+='\n\n'+appendix[index%appendix.length];
   index++;
  }
  return output;
