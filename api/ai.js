@@ -66,7 +66,7 @@ export default async function handler(req,res){
   const userMessage=isChat?entries[0].value:`FERRAMENTA: ${title}\n\nDADOS PREENCHIDOS:\n${context}\n\nCrie a entrega completa dessa ferramenta, com seções úteis, passos aplicáveis, exemplo quando fizer sentido e próximo passo claro. Não apenas repita os dados.${pdfOutputRule}`;
   const messages=[{role:'system',content:system},...history,{role:'user',content:userMessage}];
   async function callGroq(){
-   const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',signal:AbortSignal.timeout(isPdf?55000:25000),headers:{Authorization:`Bearer ${process.env.GROQ_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:GROQ_MODEL,temperature:isChat?0.35:0.45,max_completion_tokens:isPdf?7000:1000,messages})});
+   const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',signal:AbortSignal.timeout(isPdf?58000:25000),headers:{Authorization:`Bearer ${process.env.GROQ_API_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({model:GROQ_MODEL,temperature:isChat?0.35:0.45,max_completion_tokens:isPdf?7000:1000,messages})});
    const body=await response.json().catch(()=>({}));
    if(!response.ok){const error=new Error(body?.error?.message||'Groq indisponível');error.status=response.status;throw error;}
    return {answer:clean(body?.choices?.[0]?.message?.content,isPdf?24000:10000),model:GROQ_MODEL,provider:'groq'};
@@ -74,7 +74,7 @@ export default async function handler(req,res){
   async function callGemini(model=GEMINI_MODEL){
    const systemMessage=messages.find(item=>item.role==='system')?.content||'';
    const contents=messages.filter(item=>item.role!=='system').map(item=>({role:item.role==='assistant'?'model':'user',parts:[{text:item.content}]}));
-   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`,{method:'POST',signal:AbortSignal.timeout(isPdf?55000:25000),headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemMessage}]},contents,generationConfig:{temperature:isChat?0.35:(isPdf?0.58:0.45),maxOutputTokens:isPdf?6000:1000}})});
+   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`,{method:'POST',signal:AbortSignal.timeout(isPdf?58000:25000),headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemMessage}]},contents,generationConfig:{temperature:isChat?0.35:(isPdf?0.58:0.45),maxOutputTokens:isPdf?4600:1000}})});
    const body=await response.json().catch(()=>({}));
    if(!response.ok){const error=new Error(body?.error?.message||'Gemini indisponível');error.status=response.status;throw error;}
    return {answer:clean(body?.candidates?.[0]?.content?.parts?.map(part=>part?.text||'').join(' '),isPdf?24000:10000),model,provider:'gemini'};
@@ -96,6 +96,6 @@ export default async function handler(req,res){
   const used=await consumeQuotaIfAvailable(dailyKey,secondsUntilTomorrow(),quotaLimit);
   if(used<0){await metric('limited',day);return json(res,429,{error:`Você atingiu o limite diário de ${quotaLimit} ${isPdf?'PDFs':'respostas'} Tente novamente amanhã.`,remaining:0});}
   await metric('success',day);
-  return json(res,200,{ok:true,answer,remaining:Math.max(0,DAILY_LIMIT-used),model:result.model,provider:result.provider});
+  return json(res,200,{ok:true,answer,remaining:Math.max(0,quotaLimit-used),limit:quotaLimit,preview,model:result.model,provider:result.provider});
  }catch(error){console.error(error);return json(res,500,{error:error?.name==='TimeoutError'?'A IA demorou demais. Sua pergunta não consumiu a cota; tente novamente.':'A IA está temporariamente indisponível. Sua pergunta não consumiu a cota; tente novamente.'});}
 }
