@@ -244,6 +244,7 @@ async function activatePaidReturn(){
   if(!response.ok||!body.session)throw new Error(body.error||'Não foi possível confirmar o pagamento.');
   localStorage.setItem('ontop-session',body.session);
   state.access=body.access;
+  state.preview=false;
   history.replaceState({},'',location.pathname);
   await loadCloud();
   showApp();
