@@ -60,7 +60,7 @@ export default async function handler(req,res){
   async function callGemini(model=GEMINI_MODEL){
    const systemMessage=messages.find(item=>item.role==='system')?.content||'';
    const contents=messages.filter(item=>item.role!=='system').map(item=>({role:item.role==='assistant'?'model':'user',parts:[{text:item.content}]}));
-   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`,{method:'POST',signal:AbortSignal.timeout(isPdf?20000:25000),headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemMessage}]},contents,generationConfig:{temperature:isChat?0.35:(isPdf?0.58:0.45),maxOutputTokens:isPdf?6000:1000}})});
+   const response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(GEMINI_KEY)}`,{method:'POST',signal:AbortSignal.timeout(isPdf?55000:25000),headers:{'Content-Type':'application/json'},body:JSON.stringify({systemInstruction:{parts:[{text:systemMessage}]},contents,generationConfig:{temperature:isChat?0.35:(isPdf?0.58:0.45),maxOutputTokens:isPdf?6000:1000}})});
    const body=await response.json().catch(()=>({}));
    if(!response.ok){const error=new Error(body?.error?.message||'Gemini indisponível');error.status=response.status;throw error;}
    return {answer:clean(body?.candidates?.[0]?.content?.parts?.map(part=>part?.text||'').join(' '),isPdf?24000:10000),model,provider:'gemini'};
