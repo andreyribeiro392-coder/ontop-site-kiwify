@@ -169,3 +169,6 @@ button,.primary,.secondary,.ghost{box-shadow:none!important}
 #google-auth-button{min-height:46px;display:flex;align-items:center;justify-content:center;width:100%}
 #google-auth-button>button{margin-top:0!important}
 #google-auth-button iframe{max-width:100%!important}
+
+
+.auth-divider{display:flex;align-items:center;gap:10px;margin:18px 0;color:#6f8a95;font-size:11px;text-transform:uppercase;letter-spacing:.14em}.auth-divider::before,.auth-divider::after{content:"";height:1px;flex:1;background:#244653}.auth-divider span{padding:0 4px}#google-email-input{margin-top:0!important}#google-auth-button{min-height:46px;display:flex;align-items:center;justify-content:center;width:100%}#google-auth-button>button{margin-top:0!important}#google-auth-button iframe{max-width:100%!important}.google-auth-active{overflow:hidden!important}.google-auth-active #email-auth-overlay{z-index:10000!important}
