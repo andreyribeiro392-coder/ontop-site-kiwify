@@ -227,12 +227,36 @@ function restore(){const input=document.createElement('input');input.type='file'
 async function copy(t){await navigator.clipboard.writeText(t);toast('Copiado')}
 
 async function login(value){if(['localhost','127.0.0.1'].includes(location.hostname)&&value==='ONTOP-PREVIEW'){state.access={name:'Membro Plus',status:'active'};return showApp()}const isSession=String(value).startsWith('OTS_'),res=await fetch('/api/access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(isSession?{session:value}:{code:value})}),body=await res.json();if(!res.ok)throw new Error(body.error||'Falha no acesso');localStorage.setItem('ontop-session',body.session);state.access=body.access;await loadCloud();showApp()}
+async function activatePaidReturn(){
+ const params=new URLSearchParams(location.search);
+ const paymentId=params.get('payment_id')||params.get('collection_id')||'';
+ const status=(params.get('status')||params.get('collection_status')||'').toLowerCase();
+ if(!paymentId)return false;
+ if(status&&status!=='approved'){
+  const message=status==='pending'?'Pagamento pendente. Aguarde a confirmação do Mercado Pago e abra o link de retorno novamente.':'O pagamento não foi aprovado. Nenhuma cobrança foi liberada.';
+  const error=$('#access-error');if(error)error.textContent=message;
+  return true;
+ }
+ try{
+  const response=await fetch('/api/payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'activate',paymentId})});
+  const body=await response.json().catch(()=>({}));
+  if(!response.ok||!body.session)throw new Error(body.error||'Não foi possível confirmar o pagamento.');
+  localStorage.setItem('ontop-session',body.session);
+  state.access=body.access;
+  history.replaceState({},'',location.pathname);
+  await loadCloud();
+  showApp();
+ }catch(error){
+  const target=$('#access-error');if(target)target.textContent=error.message||'A confirmação ainda está sendo processada.';
+ }
+ return true;
+}
 function showOnboarding(){showModal('Bem-vindo à OnTop',`<div class="onboarding onboarding-rich"><p class="eyebrow">SUA CENTRAL DE EXECUÇÃO</p><h3>Decida melhor e avance com clareza.</h3><p>Você tem um espaço para conversar com a IA, organizar projetos, seguir uma jornada e criar materiais visuais.</p><div class="onboarding-points"><div><b>01</b><span><strong>Clareie</strong><small>Use a IA com um modo adequado ao seu objetivo.</small></span></div><div><b>02</b><span><strong>Execute</strong><small>Transforme ideias em tarefas pequenas e verificáveis.</small></span></div><div><b>03</b><span><strong>Revise</strong><small>Salve respostas e referências para reutilizar depois.</small></span></div></div><p>Você tem até 20 respostas da IA por dia. Suas conversas e progresso ficam sincronizados.</p><button class="primary" id="finish-onboarding">Explorar a Central</button></div>`);$('#finish-onboarding').onclick=()=>{data.settings={...defaults.settings,...data.settings,onboarded:true};save();document.querySelector('.modal')?.remove()}}
 function showApp(){data.settings={...defaults.settings,...data.settings};$('#gate').classList.add('hidden');$('#app').classList.remove('hidden');$('#avatar').textContent=(state.access?.name||'Plus').charAt(0).toUpperCase();layout();if(!data.settings.onboarded)setTimeout(showOnboarding,150)}
-$('#access-form').onsubmit=async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('button');btn.disabled=true;$('#access-error').textContent='';try{await login($('#access-code').value)}catch(err){$('#access-error').textContent=err.message}finally{btn.disabled=false}};
+const accessForm=$('#access-form');if(accessForm)accessForm.onsubmit=async e=>{e.preventDefault();const input=$('#access-code');const btn=e.currentTarget.querySelector('button');if(!input||!btn)return;btn.disabled=true;$('#access-error').textContent='';try{await login(input.value)}catch(err){$('#access-error').textContent=err.message}finally{btn.disabled=false}};
 $('#logout').onclick=()=>{localStorage.removeItem('ontop-session');location.reload()};$('#menu').onclick=()=>$('#sidebar').classList.toggle('open');$('#close-menu').onclick=()=>$('#sidebar').classList.remove('open');
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();state.deferred=e;$('#install').style.display='block'});$('#install').onclick=async()=>{if(state.deferred){state.deferred.prompt();state.deferred=null}else toast('Use “Adicionar à tela inicial” no menu do navegador')};
 document.addEventListener('click',event=>{if(event.target.closest('#home-learning,#open-learning-home'))document.querySelector('.guide-nav-home')?.click();if(event.target.closest('#home-ai'))document.querySelector('#academy-link')?.click()});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js?v=28').then(registration=>registration.update()).catch(()=>{});
-const session=localStorage.getItem('ontop-session');if(session)login(session).catch(()=>localStorage.removeItem('ontop-session'));
+const session=localStorage.getItem('ontop-session');if(session)login(session).catch(()=>{localStorage.removeItem('ontop-session');activatePaidReturn()});else activatePaidReturn();
 const pdfHomeButton=document.createElement('button');pdfHomeButton.className='ghost pdf-home-action';pdfHomeButton.type='button';pdfHomeButton.textContent='PDF com IA';pdfHomeButton.setAttribute('aria-label','Abrir PDF com IA');pdfHomeButton.onclick=()=>pdfTool();document.querySelector('.top-actions')?.prepend(pdfHomeButton);
