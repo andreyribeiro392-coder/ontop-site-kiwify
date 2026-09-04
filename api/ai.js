@@ -4,7 +4,7 @@ import {json,cors,deviceId,hash} from '../lib/_security.js';
 const GROQ_MODEL=process.env.GROQ_MODEL||'openai/gpt-oss-20b';
 const normalizeGeminiModel=value=>String(value||'').trim().replace(/^models\//,'');
 const GEMINI_KEY=String(process.env.GEMINI_API_KEY||'').trim();
-const GEMINI_MODEL=normalizeGeminiModel(process.env.GEMINI_MODEL||'gemini-2.5-flash');
+const GEMINI_MODEL=normalizeGeminiModel(process.env.GEMINI_MODEL||'gemini-3.6-flash');
 const DAILY_LIMIT=20;
 const PDF_MIN_CHARS=9000;
 const clean=(value,max=600)=>String(value||'').trim().slice(0,max);
@@ -68,7 +68,7 @@ export default async function handler(req,res){
   let result=null,lastError=null;
   if(isPdf){
    if(!GEMINI_KEY){await del(repeatKey);return json(res,503,{error:'O gerador de PDF precisa da GEMINI_API_KEY configurada.'});}
-   const models=[...new Set([GEMINI_MODEL,'gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash'].map(normalizeGeminiModel).filter(Boolean))];
+   const models=[...new Set(['gemini-3.6-flash',GEMINI_MODEL,'gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash'].map(normalizeGeminiModel).filter(Boolean))];
    for(const model of models){try{result=await callGemini(model);if(result?.answer)break;}catch(error){lastError=error;console.error('GEMINI',model,error.status||'',error.message||'');if(error?.name==='TimeoutError'||!error?.status||error.status>=500)break;}}
    if(result?.answer&&result.answer.replace(/\s/g,'').length<PDF_MIN_CHARS){
     await del(repeatKey);await metric('errors',day);
