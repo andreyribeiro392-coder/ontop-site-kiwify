@@ -18,6 +18,13 @@
   const GOOGLE_KEY='ontop-google-email';
   const normalizeEmail=value=>String(value||'').trim().toLowerCase();
   const validEmail=value=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value);
+  const query=new URLSearchParams(location.search);
+  const sessionFromGoogle=query.get('google_session');
+  const emailFromGoogle=normalizeEmail(query.get('google_email'));
+  const errorFromGoogle=query.get('google_error');
+  if(sessionFromGoogle)localStorage.setItem(SESSION_KEY,sessionFromGoogle);
+  if(emailFromGoogle)localStorage.setItem(GOOGLE_KEY,emailFromGoogle);
+  if(sessionFromGoogle||emailFromGoogle||errorFromGoogle)history.replaceState({},'',location.pathname);
   const alreadyVerified=()=>Boolean(localStorage.getItem(SESSION_KEY)||localStorage.getItem(GOOGLE_KEY));
   function loadGoogleScript(){
     if(window.google?.accounts?.id)return Promise.resolve();
@@ -54,6 +61,7 @@
     const fallback=screen.querySelector('#google-auth-fallback');
     const emailInput=screen.querySelector('#google-email-input');
     const message=screen.querySelector('#email-auth-message');
+    if(errorFromGoogle)message.textContent=errorFromGoogle;
     let busy=false;
     let ready=false;
     async function call(credential){
@@ -91,11 +99,11 @@
         message.textContent='';
       }catch(error){
         if(button&&!button.querySelector('button'))button.innerHTML='<button id="google-auth-fallback" type="button">Criar conta com Google</button>';
-        const retry=button?.querySelector('#google-auth-fallback');if(retry)retry.onclick=()=>start(true);
+        const retry=button?.querySelector('#google-auth-fallback');if(retry)retry.onclick=()=>{const email=normalizeEmail(emailInput.value);window.location.href='/api/access?action=google-start'+(email?'&email='+encodeURIComponent(email):'');};
         message.textContent=error.message||'Não foi possível carregar o login Google.';
       }
     }
-    if(fallback)fallback.onclick=()=>start(true);
+    if(fallback)fallback.onclick=()=>{const email=normalizeEmail(emailInput.value);window.location.href='/api/access?action=google-start'+(email?'&email='+encodeURIComponent(email):'');};
     emailInput.focus();
     start(false);
   }
