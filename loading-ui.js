@@ -10,7 +10,7 @@
   }
   function syncPreviewLabels(){
     if(!window.OnTopPreview)return;
-    const quota=document.querySelector('#ai-remaining');if(quota)quota.textContent='5';
+    const quota=document.querySelector('#ai-remaining');if(quota)quota.textContent='5';const metric=document.querySelector('.command-strip>div:nth-child(4)');if(metric){const value=metric.querySelector('strong'),label=metric.querySelector('span');if(value)value.textContent='5';if(label)label.textContent='respostas na prévia';}
     document.querySelectorAll('p,small,span,strong,h3,h4').forEach(el=>{
       if(el.children.length)return;
       const text=el.textContent||'';
