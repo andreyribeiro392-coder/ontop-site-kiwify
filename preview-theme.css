@@ -164,3 +164,8 @@ button,.primary,.secondary,.ghost{box-shadow:none!important}
 #email-auth-card .email-hint{margin-top:14px;margin-bottom:0;color:#718d98;font-size:11px}
 @media(max-width:760px){#email-auth-overlay{padding:12px}#email-auth-card{padding:22px 18px;border-radius:18px}#email-auth-card h1{font-size:22px}}
 
+
+
+#google-auth-button{min-height:46px;display:flex;align-items:center;justify-content:center;width:100%}
+#google-auth-button>button{margin-top:0!important}
+#google-auth-button iframe{max-width:100%!important}
