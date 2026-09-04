@@ -53,7 +53,7 @@
         if(!config.googleClientId){message.textContent='O login Google ainda não foi configurado. Adicione GOOGLE_CLIENT_ID na Vercel.';return;}
         await loadGoogleScript();
         button.innerHTML='';
-        google.accounts.id.initialize({client_id:config.googleClientId,callback:async response=>{
+        window.google.accounts.id.initialize({client_id:config.googleClientId,ux_mode:'popup',callback:async response=>{
           if(busy)return;busy=true;message.textContent='Confirmando sua conta...';
           try{
             const body=await call(response.credential);
@@ -63,8 +63,13 @@
             window.dispatchEvent(new CustomEvent('ontop-email-verified'));
           }catch(error){message.textContent=error.message;busy=false;}
         }});
-        google.accounts.id.renderButton(button,{theme:'filled_black',size:'large',text:'continue_with',shape:'pill',width:Math.min(360,Math.max(260,button.clientWidth||320))});
-      }catch(error){message.textContent=error.message||'Não foi possível carregar o login Google.';}
+        window.google.accounts.id.renderButton(button,{theme:'filled_black',size:'large',text:'continue_with',shape:'pill',width:Math.min(360,Math.max(260,button.clientWidth||320))});
+        window.google.accounts.id.prompt();
+      }catch(error){
+        if(button&&!button.querySelector('button'))button.innerHTML='<button id="google-auth-fallback" type="button">Continuar com Google</button>';
+        const retry=button?.querySelector('#google-auth-fallback');if(retry)retry.onclick=()=>start();
+        message.textContent=error.message||'Não foi possível carregar o login Google.';
+      }
     }
     if(fallback)fallback.onclick=()=>start();
     start();
