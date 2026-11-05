@@ -1,5 +1,5 @@
-const CACHE='ontop-plus-v35';
-const ASSETS=['/','/styles.css?v=31','/guide.css?v=11','/catalog.css?v=11','/catalog-prices.css?v=11','/toast.css?v=11','/refresh.css?v=11','/guide-proof.css?v=18','/validation.css?v=18','/futuristic.css?v=2','/app.js?v=29','/academy.js?v=27','/guide.js?v=18','/catalog-ui.js?v=18','/legal.css','/privacy.html','/terms.html','/assets-ontop-mark.svg?v=4','/manifest.webmanifest?v=6'];
-self.addEventListener('install',event=>{self.skipWaiting();event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)))});
-self.addEventListener('activate',event=>event.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))])));
-self.addEventListener('fetch',event=>{if(event.request.method!=='GET'||new URL(event.request.url).pathname.startsWith('/api/'))return;event.respondWith(fetch(event.request).then(response=>{const copy=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,copy));return response}).catch(()=>caches.match(event.request)))});
+const CACHE='novelsday-v1';
+const ASSETS=['/','/course.css?v=1','/course.js?v=1','/brand.svg','/terms.html','/privacy.html'];
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));self.skipWaiting()});
+self.addEventListener('activate',event=>{event.waitUntil(Promise.all([self.clients.claim(),caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))]))});
+self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(event.request.method!=='GET'||url.origin!==location.origin||url.pathname.startsWith('/api/')||url.pathname.includes('legacy'))return;event.respondWith(fetch(event.request).then(response=>{if(response.ok&&response.type==='basic'){const clone=response.clone();caches.open(CACHE).then(cache=>cache.put(event.request,clone))}return response}).catch(()=>caches.match(event.request)))});

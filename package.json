@@ -1,1 +1,1 @@
-{"name":"ontop-central-plus","version":"1.1.0","private":true,"type":"module","scripts":{"dev":"vercel dev","check":"node --check app.js && node --check admin.js && node --check api/admin.js && node --check api/catalog.js"},"engines":{"node":">=20"}}
+{"name":"novels-day-academia","version":"2.0.0","private":true,"type":"module","scripts":{"dev":"vercel dev","check":"node --check course.js && node --check sw.js && node --check api/access.js && node --check api/payment.js && node --check api/admin.js"},"engines":{"node":">=20"}}
