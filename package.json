@@ -1,1 +1,1 @@
-{"name":"novels-day-academia","version":"2.0.0","private":true,"type":"module","scripts":{"dev":"vercel dev","check":"node --check course.js && node --check sw.js && node --check api/access.js && node --check api/payment.js && node --check api/admin.js"},"engines":{"node":">=20"}}
+{"name": "novels-day-academia", "version": "3.0.0", "private": true, "type": "module", "scripts": {"dev": "vercel dev", "check": "node --check course.js && node --check api/learn.js && node --test tests/academy.test.mjs", "build": "node scripts/build.mjs"}, "engines": {"node": ">=20"}}
